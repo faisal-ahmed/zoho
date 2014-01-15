@@ -2,8 +2,10 @@
 /*
  * Created on April 24, 2013
  * @author - Mohammad Faisal Ahmed <faisal.ahmed0001@gmail.com>
- * Documentation Coming Soon
+ *
  */
+
+include_once 'Utilities.php';
 
 abstract class ZohoIntegrator
 {
@@ -34,7 +36,7 @@ abstract class ZohoIntegrator
         $this->xmlData = '';
         $this->zohoApiOperationType = '';
         $this->zohoModuleName = '';
-        $this->uriParameter = '';
+        $this->uriParameter = array();
         $this->requestUriToZoho = '';
         $this->zohoResponse = '';
         $this->uriParameterExtended = '';
@@ -43,28 +45,28 @@ abstract class ZohoIntegrator
 
     public function setZohoApiUrl($apiUrl)
     {
-        if ($apiUrl == '') return 'Value cannot be empty';
+        if ($apiUrl == '') return 'ZohoApiUrl cannot be empty';
         $this->zohoApiUrl = $apiUrl;
         return true;
     }
 
     public function setZohoModuleName($moduleName)
     {
-        if ($moduleName == '') return 'Value cannot be empty';
+        if ($moduleName == '') return 'ZohoModuleName cannot be empty';
         $this->zohoModuleName = $moduleName;
         return true;
     }
 
     public function setZohoApiOperationType($operationType)
     {
-        if ($operationType == '') return 'Value cannot be empty';
+        if ($operationType == '') return 'ZohoApiOperationType cannot be empty';
         $this->zohoApiOperationType = $operationType;
         return true;
     }
 
     public function setZohoXmlColumnNameAndValue($xmlColumn)
     {
-        if (!is_array($xmlColumn)) return 'Data must be an array';
+        if (!is_array($xmlColumn)) return 'ZohoXmlColumnNameAndValue must be an array';
 
         $this->zohoXmlColumn = $xmlColumn;
 
@@ -83,7 +85,7 @@ abstract class ZohoIntegrator
 
     public function setZohoExtendedUriParameter($parameter)
     {
-        if (!is_array($parameter)) return 'Data must be an array';
+        if (!is_array($parameter)) return 'ZohoExtendedUriParameter must be an array';
 
         $this->uriParameterExtended = $parameter;
 
@@ -96,42 +98,41 @@ abstract class ZohoIntegrator
 
         if (!is_array($parameter)) $this->uriParameterExtended = array_merge($this->uriParameterExtended, (array)$parameter);
         else $this->uriParameterExtended = array_merge($this->uriParameterExtended, $parameter);
-        ;
 
         return true;
     }
 
     public function setZohoAuthToken($authToken)
     {
-        if ($authToken == '') return 'Value cannot be empty';
+        if ($authToken == '') return 'ZohoAuthToken cannot be empty';
         $this->zohoAuthToken = $authToken;
         return true;
     }
 
     public function setZohoScope($scope)
     {
-        if ($scope == '') return 'Value cannot be empty';
+        if ($scope == '') return 'ZohoScope cannot be empty';
         $this->zohoScope = $scope;
         return true;
     }
 
     public function setZohoEncoding($encoding)
     {
-        if ($encoding == '') return 'Value cannot be empty';
+        if ($encoding == '') return 'ZohoEncoding cannot be empty';
         $this->zohoEncoding = $encoding;
         return true;
     }
 
     public function setRequestMethod($requestMethod)
     {
-        if ($requestMethod == '') return 'Value cannot be empty';
+        if ($requestMethod == '') return 'RequestMethod cannot be empty';
         $this->requestMethod = $requestMethod;
         return true;
     }
 
     public function setWfTrigger($trigger)
     {
-        if (!(strtolower($trigger) === 'true' || strtolower($trigger) === 'false')) return 'Value must be either true or false';
+        if (!(strtolower($trigger) === 'true' || strtolower($trigger) === 'false')) return 'WfTrigger must be either true or false';
         $this->wfTrigger = strtolower($trigger);
         return true;
     }
@@ -199,7 +200,7 @@ abstract class ZohoIntegrator
 
     public function getFullRequestUriToZoho()
     {
-        return $this->requestUriToZoho . '?' . $this->uriParameter;
+        return $this->requestUriToZoho . $this->uriParameter;
     }
 
     public function getXMLData()
@@ -210,7 +211,6 @@ abstract class ZohoIntegrator
     private function XMLGeneration($xmlArray, $rowsCount = 1, $rowsName = 'row', $keyAdd = true)
     {
         $xmlData = '';
-        $count = $rowsCount;
         foreach ($xmlArray as $key => $value) {
             if (is_array($value)) {
                 if (is_numeric($key)) $finalOutput = $this->XMLGeneration($value, $key, $rowsName);
@@ -251,15 +251,20 @@ abstract class ZohoIntegrator
             return 'Please set the Zoho Module correctly';
         else if (empty($this->zohoApiOperationType))
             return 'Please set the Zoho Operation type correctly';
+        else if (empty($this->zohoAuthToken))
+            return 'Please set the Zoho Authtoken correctly';
+        else if (empty($this->zohoScope))
+            return 'Please set the Zoho scope correctly';
 
-        $this->requestUriToZoho = $this->zohoApiUrl . '/' . $this->zohoModuleName . '/' . $this->zohoApiOperationType;
+        $this->requestUriToZoho = $this->zohoApiUrl . '/' . $this->zohoModuleName . '/' . $this->zohoApiOperationType . "?authtoken={$this->zohoAuthToken}&scope={$this->zohoScope}";
 
         return true;
     }
 
     private function setParameter($key, $value)
     {
-        $this->uriParameter = isset($this->uriParameter) && strlen($this->uriParameter) != 0 ? ("{$this->uriParameter}&$key=$value") : ("$key=$value");
+        $this->uriParameter["$key"] = $value;
+        /*$this->uriParameter = isset($this->uriParameter) && strlen($this->uriParameter) != 0 ? ("{$this->uriParameter}&$key=$value") : ("$key=$value");*/
         return true;
     }
 
@@ -267,25 +272,19 @@ abstract class ZohoIntegrator
     {
         $this->buildXML();
 
-        if (isset($this->zohoAuthToken))
-            $this->setParameter('authtoken', $this->zohoAuthToken);
-        else return 'Zoho Auth Token missing';
-
-        if (isset($this->zohoScope))
-            $this->setParameter('scope', $this->zohoScope);
-        else return 'Zoho Scope missing';
-
-        if (isset($this->xmlData))
+        if (isset($this->xmlData) && $this->xmlData != '')
             $this->setParameter('xmlData', $this->xmlData);
 
-        if (isset($this->wfTrigger))
+        if (isset($this->wfTrigger) && $this->wfTrigger != 'false')
             $this->setParameter('wfTrigger', $this->wfTrigger);
 
         if ($this->multipleOperation != 'false')
             $this->setParameter('version', $this->multipleOperation);
 
-        foreach ($this->uriParameterExtended as $key => $value)
-            $this->setParameter($key, $value);
+        if (isset($this->uriParameterExtended) && count($this->uriParameterExtended) != 0) {
+            foreach ($this->uriParameterExtended as $key => $value)
+                $this->setParameter($key, $value);
+        }
 
         return true;
     }
@@ -293,7 +292,6 @@ abstract class ZohoIntegrator
     protected function sendCurl()
     {
         if (!isset($this->requestUriToZoho) || strlen($this->requestUriToZoho) == 0) return "Request URI not set";
-        if (!isset($this->uriParameter) || strlen($this->uriParameter) == 0) return "Request URI parameter not set";
         try {
             /* initialize curl handle */
             $ch = curl_init();
@@ -307,10 +305,18 @@ abstract class ZohoIntegrator
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
             /* set POST method */
             curl_setopt($ch, CURLOPT_POST, 1);
+            /*To activate RC4-SHA which causes the SSL connection error
+            **Zoho uses RC4-SHA, which was not enabled in cURL by default*/
+            curl_setopt( $ch, CURLOPT_SSL_CIPHER_LIST, 'rsa_rc4_128_sha' );
             /* add POST fields parameters */
             curl_setopt($ch, CURLOPT_POSTFIELDS, $this->uriParameter);
             /* execute the cURL */
             $this->zohoResponse = curl_exec($ch);
+
+            if (FALSE === $this->zohoResponse) {
+                throw new Exception(curl_error($ch), curl_errno($ch));
+            }
+
             curl_close($ch);
         } catch (Exception $exception) {
             $this->zohoResponse = $exception;
@@ -330,6 +336,7 @@ abstract class ZohoIntegrator
         return false;
     }
 
+    //TODO: Change this checking system
     protected function checkMandatoryFields($moduleName, $xmlArray)
     {
         if ($moduleName === ACCOUNT_MODULE && !$this->array_key_exist_recursive('Account Name', $xmlArray))
@@ -347,75 +354,4 @@ abstract class ZohoIntegrator
     abstract public function doRequest();
 }
 
-class B2CControllerForDrupal extends ZohoIntegrator
-{
-    public function __construct($authtoken = null)
-    {
-        $this->resetWithDefaults();
-        $authtoken = ($authtoken === null) ? variable_get('zoho_authtoken', '') : $authtoken;
-        $authtokenSet = $this->setZohoAuthToken($authtoken);
-        if ($authtokenSet !== true) {
-            echo 'Please provide authtoken or set auth token first';
-            die();
-        }
-    }
-
-    public function doRequest()
-    {
-        $response = $this->buildRequestUri();
-        if ($response !== true) return $response;
-        $response = $this->buildUriParameter();
-        if ($response !== true) return $response;
-        return $this->sendCurl();
-    }
-
-    public function searchRecordsWithCustomField($moduleName, $fieldName, $fieldValue, $matchingExpression = 'contains')
-    {
-        $this->resetWithDefaults();
-        $this->setZohoModuleName("$moduleName");
-        $this->setZohoApiOperationType('getSearchRecords');
-        if ($matchingExpression == 'contains') $fieldValue = '*' . $fieldValue . '*';
-        $extraParameter = array(
-            "searchColumn" => "$moduleName($fieldName)",
-            "searchCondition" => "($fieldName|$matchingExpression|$fieldValue)",
-            "selectColumns" => "All",
-        );
-        $this->setZohoExtendedUriParameter($extraParameter);
-
-        return $this->doRequest();
-    }
-
-    public function insertRecords($moduleName, $xmlArray, $wfTrigger = 'false', $version = 'false')
-    {
-        if (($response = $this->checkMandatoryFields($moduleName, $xmlArray)) !== true) return $response;
-        $this->resetWithDefaults();
-        $this->setZohoModuleName("$moduleName");
-        $this->setZohoApiOperationType('insertRecords');
-        $this->setRequestMethod('POST');
-        if ($wfTrigger != 'false') $this->setWfTrigger($wfTrigger);
-        if ($version != 'false') $this->setMultipleOperation($version);
-        $xmlSet = $this->setZohoXmlColumnNameAndValue($xmlArray);
-
-        if ($xmlSet !== true) return $xmlSet;
-
-        return $this->doRequest();
-    }
-
-    public function getRecordsOfZoho($moduleName, $lastModifiedTime = null, $sortColumnString = null, $sortOrderString = 'desc', $fromIndex = null, $toIndex = null)
-    {
-        $this->resetWithDefaults();
-        $this->setZohoModuleName("$moduleName");
-        $this->setZohoApiOperationType('getRecords');
-        $extraParameter = array(
-            "sortOrderString" => "$sortOrderString"
-        );
-        if (isset($lastModifiedTime)) $extraParameter['lastModifiedTime'] = $lastModifiedTime;
-        if (isset($fromIndex)) $extraParameter['fromIndex'] = $fromIndex;
-        if (isset($toIndex)) $extraParameter['toIndex'] = $toIndex;
-        if (isset($sortColumnString)) $extraParameter['sortColumnString'] = $sortColumnString;
-
-        $this->setZohoExtendedUriParameter($extraParameter);
-
-        return $this->doRequest();
-    }
-}
+?>
